@@ -27,9 +27,10 @@ def return_mean_ndvi(geometry, buffer_distance=None): # function to return mean 
     geometry - ee.Geometry object representing area
     buffer_distance - distance to buffer geometry to reduce mixed pixels
     """
-    def get_stats(image):
-        if buffer_distance != None:
+    if buffer_distance != None:
             geometry = geometry.buffer(buffer_distance)
+    def get_stats(image):
+        
         indices = image.select(['ndvi'])
         stats = indices.reduceRegion(**{
             'geometry': geometry,
@@ -86,24 +87,50 @@ def process_images(feature, image_collections, folder_path): # process all image
     df = pd.DataFrame.from_dict(timeseries, orient='columns')
     df.to_csv(fn)
 ### END OF FUNCTIONS ###
+
 # define sensors and years for imageCollections
-image_collections = {
+image_collections = {2013: 'LS8'} 
+    # add '1998: LS4'
+image_collections[1988] = 'LS4'
+# add other sensors
+for i in range(1999, 2023, 1):
+    if i < 2013:
+        image_collections[i] = 'LS7'
+    elif 2012 < i < 2018:
+        image_collections[i] = 'LS8'
+    else:
+        image_collections[i] = 'S2'
 
-}
-
-output_directory_path = "data"
+output_directory_path = "test-data"
 
 if __name__ == '__main__':
     start = time.time()
 
     # shapefiles/geometries go here 
+    h3_grids = gpd.read_file("test-data/h3-coast-all-res.gpkg")
+    hr5_cells = gpd.read_file("test-data/HR5-change-cells-aoi.gpkg")
 
-    geometries = list() # list of geometries for iteration
+    geometries = list(hr5_cells[:5]['index']) # list of geometries for iteration
 
     for geom in geometries:
         geom_output_dir = os.path.join(output_directory_path, geom)
         if not os.path.exists(geom_output_dir):
             os.makedirs(geom_output_dir)
+            # return all child cells at res 5 for test cell at index 4
+        down_cells = h3_utils.get_child_cells(h3_grids, i, 6)
+
+        print(down_cells)
+
+        # test downloading whole cell at HR5
+        #down_cells = h3_cells[h3_cells['index'] == i]
+        # reproject to 4326 for GEE
+        down_cells.to_crs(4326, inplace=True)
+
+        # create dict of cells to be downloaded
+        features = down_cells.iterfeatures()
+
+        # download images
+        process_map(partial(process_images, image_collections=image_collections, folder_path=geom_output_dir), features, max_workers=7)
 
 
     end = time.time()
