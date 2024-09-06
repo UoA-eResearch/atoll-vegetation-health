@@ -71,7 +71,7 @@ def process_images(feature, image_collections, folder_path): # process all image
                 veg_stats = images.map(return_mean_ndvi(aoi))
                 features = [i for i in veg_stats.getInfo().get('features')]
                 for f in features:
-                    print(f)
+                    #print(f)
                     image_attributes = {} 
                     date = dt.fromtimestamp(f['properties']['system:time_start']/ 1000.)
                     try:
@@ -82,8 +82,8 @@ def process_images(feature, image_collections, folder_path): # process all image
 
                         timeseries.append(image_attributes)
                     except:
-                        print(f"Issue with image id: {f['id']} from {year}")
-                        print(f"skipping {f['id']}")
+                        #print(f"Issue with image id: {f['id']} from {year}")
+                        #print(f"skipping {f['id']}")
                         pass
         else:
             print(f"No images for {sensor} in year: {year}")
@@ -94,18 +94,15 @@ def process_images(feature, image_collections, folder_path): # process all image
     df.to_csv(fn)
 ### END OF FUNCTIONS ###
 
-# define sensors and years for imageCollections
-image_collections = {2013: 'LS8'} 
-    # add '1998: LS4'
-image_collections[1988] = 'LS4'
-# add other sensors
-for i in range(1999, 2023, 1):
-    if i < 2013:
-        image_collections[i] = 'LS7'
-    elif 2012 < i < 2018:
-        image_collections[i] = 'LS8'
-    else:
-        image_collections[i] = 'S2'
+
+image_collections = {} # define sensors and years for imageCollections
+
+for i in range(1984, 2012):
+    image_collections[i] = 'LS5'
+for i in range(1999, 2003, 1):
+    image_collections[i] = 'LS7'
+for i in range(2013, 2023, 1):
+    image_collections[i] = 'HLSL30'
 
 output_directory_path = "test-data"
 
