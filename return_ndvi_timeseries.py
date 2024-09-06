@@ -1,3 +1,11 @@
+import ee
+
+try:
+    ee.Initialize()
+except:                
+    ee.Authenticate()
+    ee.Initialize()
+
 from geeutil import feature_utils
 from geeutil import sentinel2_utils
 from geeutil import image_utils
@@ -7,7 +15,6 @@ from geeutil import imagecollection_utils
 
 import geopandas as gpd
 import pandas as pd
-import ee
 import time
 
 from tqdm.contrib.concurrent import process_map
@@ -15,8 +22,6 @@ from functools import partial
 import glob
 import os
 from datetime import datetime as dt
-
-ee.Initialize()
 
 ### FUNCTIONS ###
 def return_mean_ndvi(geometry, buffer_distance=None): # function to return mean ndvi for geometry
@@ -40,7 +45,7 @@ def return_mean_ndvi(geometry, buffer_distance=None): # function to return mean 
 
         feature = ee.Feature(None, {
             # add indices
-            'NDVI': ndvi
+            'ndvi': ndvi
         }).copyProperties(image, [
             'system:time_start' # get image acquisition 
         ])
@@ -62,23 +67,24 @@ def process_images(feature, image_collections, folder_path): # process all image
     for year, sensor in image_collections.items(): # iterate through imageCollections
         images = imagecollection_utils.gen_imageCollection(year, aoi, sensor)
         if images.size().getInfo() != 0:
-            try:
                 images = (images.map(normalised_difference.apply_ndvi))
                 veg_stats = images.map(return_mean_ndvi(aoi))
                 features = [i for i in veg_stats.getInfo().get('features')]
                 for f in features:
+                    print(f)
                     image_attributes = {} 
                     date = dt.fromtimestamp(f['properties']['system:time_start']/ 1000.)
-                    
-                    image_attributes['date'] = date # return attributes for each image
-                    image_attributes['sensor'] = sensor
-                    image_attributes['image_id'] = f['id']
-                    image_attributes['ndvi'] = f['properties']['NDVI']
+                    try:
+                        image_attributes['date'] = date # return attributes for each image
+                        image_attributes['sensor'] = sensor
+                        image_attributes['image_id'] = f['id']
+                        image_attributes['ndvi'] = f['properties']['ndvi']
 
-                    timeseries.append(image_attributes)
-            except:
-                print(f"There was an issue with {sensor} for year: {year}")
-                pass
+                        timeseries.append(image_attributes)
+                    except:
+                        print(f"Issue with image id: {f['id']} from {year}")
+                        print(f"skipping {f['id']}")
+                        pass
         else:
             print(f"No images for {sensor} in year: {year}")
             continue
@@ -110,14 +116,14 @@ if __name__ == '__main__':
     h3_grids = gpd.read_file("test-data/h3-coast-all-res.gpkg")
     hr5_cells = gpd.read_file("test-data/HR5-change-cells-aoi.gpkg")
 
-    geometries = list(hr5_cells[:5]['index']) # list of geometries for iteration
+    geometries = list(hr5_cells[:1]['index']) # list of geometries for iteration
 
     for geom in geometries:
         geom_output_dir = os.path.join(output_directory_path, geom)
         if not os.path.exists(geom_output_dir):
             os.makedirs(geom_output_dir)
             # return all child cells at res 5 for test cell at index 4
-        down_cells = h3_utils.get_child_cells(h3_grids, i, 6)
+        down_cells = h3_utils.get_child_cells(h3_grids, geom, 6)
 
         print(down_cells)
 
