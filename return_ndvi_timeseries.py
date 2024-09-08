@@ -133,8 +133,7 @@ if __name__ == '__main__':
         features = down_cells.iterfeatures()
 
         # download images
-        process_map(partial(process_images, image_collections=image_collections, folder_path=geom_output_dir), features, max_workers=7)
-
+        process_map(partial(process_images, image_collections=image_collections, folder_path=geom_output_dir), features)
 
     end = time.time()
     print(f"Processing finished in {(end-start)/60} minutes.")
