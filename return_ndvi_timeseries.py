@@ -86,7 +86,9 @@ def process_images(feature, image_collections, folder_path): # process all image
                         #print(f"skipping {f['id']}")
                         pass
         else:
-            print(f"No images for {sensor} in year: {year}")
+            print(f"No images for shp_id: {feature['properties']['index']}
+                    sensor: {sensor}
+                    year: {year}")
             continue
     
     fn = f"{folder_path}/{feature['properties']['index']}-timeseries.csv"
